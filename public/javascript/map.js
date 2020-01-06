@@ -8,13 +8,6 @@ const map = new mapboxgl.Map({
   cycling: true
 });
 
-new mapboxgl.GeolocateControl({
-  positionOptions: {
-    enableHighAccuracy: true
-  },
-  trackUserLocation: true
-});
-
 var marker = new mapboxgl.Marker({
   draggable: true
 })
@@ -38,3 +31,63 @@ function onDragEnd() {
 marker.on("dragend", onDragEnd);
 
 console.log("hello from map.js");
+
+async function getTrails() {
+  const res = await fetch("http://localhost:5000/api/v1/trails");
+  const data = await res.json();
+
+  const trails = data.data.map(trail => {
+    return {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [
+          trail.location.coordinates[0],
+          trail.location.coordinates[1]
+        ]
+      },
+      properties: {
+        trailId: trail.trailId,
+        issueDetail: trail.issueDetail,
+        icon: "../images/iconfinder_map-marker_299087.png"
+      }
+    };
+  });
+
+  loadMap(trails);
+
+  function loadMap(trails) {
+    map.on("load", function() {
+      map.addLayer({
+        id: "points",
+        type: "symbol",
+        source: {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: trails
+          }
+        },
+        layout: {
+          "icon-image": "../images/iconfinder_map-marker_299087.png",
+          "icon-size": 1.5,
+          "text-field": "{trailId}",
+          "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+          "text-offset": [0, 0.9],
+          "text-anchor": "top",
+          "text-field": "{issueDetail}"
+        }
+      });
+    });
+  }
+}
+map.addControl(
+  new mapboxgl.GeolocateControl({
+    positionOptions: {
+      enableHighAccuracy: true
+    },
+    trackUserLocation: true
+  })
+);
+
+getTrails();
